@@ -1,27 +1,26 @@
 import fastify from 'fastify';
-import {PrismaClient} from '@prisma/client';
-import { z } from 'zod';
+import cookie from '@fastify/cookie'
+import  websocket  from '@fastify/websocket';
+import { createPolls } from '../routes/create-polls';
+import { getPolls } from '../routes/get-polls';
+import { voteOnPoll } from '../routes/vote-on-poll';
+import { pollResults } from './ws/poll-results';
 
 const app = fastify();
-const prisma = new PrismaClient();
 
-app.post("/polls", async (request, reply) => {
-    const createPollBody = z.object({
-        title: z.string()
-    })
-
-    const { title} = createPollBody.parse(request.body)
-    //pega o request body e ve se esta no formato acima
-
-    const poll = await prisma.poll.create({
-        data: {
-            title,
-        }
-    })
-    
-    return reply.status(201).send({ pollID: poll.id})
+app.register(cookie, {
+    secret: "poll-NLW", // for cookies signature
+    hook: 'onRequest', // set to false to disable cookie autoparsing or set autoparsing on any of the following hooks: 'onRequest', 'preParsing', 'preHandler', 'preValidation'. default: 'onRequest'
 })
+
+app.register(websocket)
+
+app.register(createPolls);
+app.register(getPolls);
+app.register(voteOnPoll);
+app.register(pollResults);
+
 
 app.listen({port: 3333}).then(() => {
     console.log('HTTP server running!')
-})
+});
